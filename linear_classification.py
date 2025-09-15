@@ -13,76 +13,104 @@ def plot_image(image_list):
 
 def train(all_images, all_labels, label1, label2):
     # filter the data for the two labels
-    filter = [(img, lbl) for img, lbl in zip(all_images, all_labels) if lbl == label1 or lbl == label2]
-    X = np.asarray([img for img, lbl in filter], dtype=np.float64)
-    Y = np.asarray([1 if lbl == label1 else 0 for img, lbl in filter])
+    pairs = [(img, lbl) for img, lbl in zip(all_images, all_labels) if lbl == label1 or lbl == label2]
+    X = np.asarray([img for img, lbl in pairs], dtype=np.float64)
+    Y = np.asarray([1 if lbl == label1 else 0 for img, lbl in pairs], dtype=np.float64)
+    print("Number of samples:", X.shape[0], "Number of features:", X.shape[1])
     
+
+    # drop redundant columns in X (exact duplicates cause singularity)
+    # keep_cols = X.var(axis=0) > 0.0
+    # X = X[:, keep_cols]
+
     # add a column of ones to the dataset (bias term)
     X = np.hstack([np.ones((X.shape[0], 1)), X])
-    
+
+    m, n = X.shape
+    # print(f"Rows (samples) of X must match labels in Y (got {len(Y)} vs {m})")
+    # print("After dropping constant columns and adding bias term, shape of X:", X.shape, "shape of Y:", Y.shape, "number of kept features:", np.sum(keep_cols))
+
     # Multidimensional least squares (X^TX)^(-1)X^TY
-    # weights = np.linalg.pinv(X.T @ X) @ X.T @ 
+    # weights = np.linalg.pinv(X.T @ X) @ X.T @ Y
 
-    m, n = X.shape    
-    r = np.linalg.matrix_rank(X)
-    print("shape:", X.shape, "rank:", r, "min(m,n):", min(m, n))
-
-    # print(f"Y must have one label per row of X (got {len(Y)} vs {m})")
-
-    reg = 1e-6  # small regularization parameter
+    tol = 1e-15  # eigenvalue tolerance; values below are treated as zero
     if m >= n:
-        # X is tall or square (X^T @ X)^{-1} X^T
+        print("Using (X^T X)^+ X^T (tall/square case)")
         XtX = X.T @ X
-        # print("X^T X shape:", XtX.shape, "rank:", np.linalg.matrix_rank(XtX))
-        # Add regularization to the diagonal to avoid singularity
-        XtX_reg = XtX + reg * np.eye(n)
-        XtX_inv = np.linalg.inv(XtX_reg)
-        weights = XtX_inv @ X.T @ Y
+        
+        eigenvals, eigenvecs = np.linalg.eig(XtX)
+        eigenvals = np.real(eigenvals)
+        eigenvecs = np.real(eigenvecs)
+        
+        # if eigenvalues are less than tol, treat as zero to avoid undefined inversions this is equivalent to the linear independence of the columns of X
+        lin_ind_col = eigenvals > tol
+        rank = int(np.count_nonzero(lin_ind_col))
+        print(f"Eigenvalues kept (Linearly Independent columns of X): {rank}/{len(eigenvals)} (tol={tol})")
+
+        # Compute the pseudo-inverse using the new eigenvalues
+        inv_diag = np.zeros_like(eigenvals)
+        inv_diag[lin_ind_col] = 1.0 / eigenvals[lin_ind_col]
+        print("Inverted eigenvalues diagonal shape:", np.diag(inv_diag).shape)
+
+        # pseudoinverse XtX^+ using the eigen decomposition
+        XtX_pinv = eigenvecs @ np.diag(inv_diag) @ eigenvecs.T
+        weights = XtX_pinv @ X.T @ Y
     else:
-        # X is wide n>m (X^T (X X^T)^{-1})
+        # Wide case: use X^T (X X^T)^+ Y
+        print("Using X^T (X X^T)^+ (wide case)")
         XXt = X @ X.T
-        XXt_reg = XXt + reg * np.eye(m)
-        XXt_inv = np.linalg.inv(XXt_reg)
-        weights = X.T @ XXt_inv @ Y
+        
+        eigenvals, eigenvecs = np.linalg.eigh(XXt)
+        eigenvals = np.real(eigenvals)
+        eigenvecs = np.real(eigenvecs)
+
+        lin_ind_col = np.abs(eigenvals) > tol
+        rank = int(np.count_nonzero(lin_ind_col))
+        print(f"Eigenvalues kept (Linearly Independent columns of X): {rank}/{len(eigenvals)} (tol={tol})")
+        
+        inv_diag = np.zeros_like(eigenvals)
+        inv_diag[lin_ind_col] = 1.0 / eigenvals[lin_ind_col]
+        print("Inverted eigenvalues diagonal shape:", np.diag(inv_diag).shape)
+        
+        XXt_pinv = eigenvecs @ np.diag(inv_diag) @ eigenvecs.T
+        weights = X.T @ XXt_pinv @ Y
 
     return weights
 
 
 # required for graduate students only
 def get_optimal_thresh(images_train, labels_train, w):
-    filter = [(img, lbl) for img, lbl in zip(images_train, labels_train) if lbl == label1 or lbl == label2]
-    X = np.array([img for img, lbl in filter])
-    Y = np.array([1 if lbl == label1 else 0 for img, lbl in filter])
+    pairs = [(img, lbl) for img, lbl in zip(images_train, labels_train) if lbl == label1 or lbl == label2]
+    X = np.asarray([img for img, lbl in pairs], dtype=np.float64)
+    Y = np.asarray([1 if lbl == label1 else 0 for img, lbl in pairs], dtype=np.float64)
     
     X = np.hstack((np.ones((X.shape[0], 1)), X))
-    preds = X @ w
+    predictions = X @ w
     
     best_thresh, best_acc = 0.5, 0
-    for t in np.linspace(0, 1, 201):
+    for t in np.linspace(0, 1, 1001):
         # print(t)
-        pred_labels = (preds > t).astype(int)
-        correct = (pred_labels == Y)
-        num_correct = np.sum(correct)
-        acc = num_correct / len(Y)
-        if acc > best_acc:
-            best_acc, best_thresh = acc, t
-            
-    return best_thresh
+        pred_labels = (predictions > t).astype(int)
+        accuracy = (pred_labels == Y).mean()
+        if accuracy > best_acc:
+            best_acc, best_thresh = accuracy, t
+
+    return best_thresh, best_acc
 
 
 def test(all_images_test, all_labels_test, label1, label2, w, thresh):
-    filter = [(img, lbl) for img, lbl in zip(all_images_test, all_labels_test) if lbl == label1 or lbl == label2]
-    X_test = np.array([img for img, lbl in filter])
-    Y_test = np.array([1 if lbl == label1 else 0 for img, lbl in filter])
+    pairs = [(img, lbl) for img, lbl in zip(all_images_test, all_labels_test) if lbl == label1 or lbl == label2]
+    X_test = np.asarray([img for img, lbl in pairs], dtype=np.float64)
+    G_truth = np.asarray([1 if lbl == label1 else 0 for img, lbl in pairs], dtype=np.float64)
+
+    # X_test = X_test[:, keep_cols]
     
     X_test = np.hstack((np.ones((X_test.shape[0], 1)), X_test))
 
     predictions = X_test @ w
     predictions = (predictions > thresh).astype(int)
-    correct = (predictions == Y_test)
-    num_correct = np.sum(correct)
-    accuracy = num_correct / len(Y_test)
-    
+    accuracy = (predictions == G_truth).mean()
+
     return accuracy
 
 
@@ -96,7 +124,6 @@ if __name__ == "__main__":
     # Your code goes here
     print("Number of training samples:", len(images_list))
     print("Number of testing samples:", len(images_list_test))
-    print("Image size:", np.array(images_list).shape[1])
     unique_labels = set(labels_list)
     print("Labels:", unique_labels)
     
@@ -109,11 +136,16 @@ if __name__ == "__main__":
                 pair_counter += 1
                 print(f"Training classifier on digits {label1} and {label2} ({pair_counter}/45)")
                 weights = train(images_list, labels_list, label1, label2)
+                
                 print("Testing...")
                 accuracy = test(images_list_test, labels_list_test, label1, label2, weights, 0.5)
                 print(f"Test accuracy: {accuracy*100:.2f}%")
-                optimal_thresh = get_optimal_thresh(images_list, labels_list, weights)
+                
+                print("Calculating optimal threshold on training set...")
+                optimal_thresh, optimal_acc = get_optimal_thresh(images_list, labels_list, weights)
                 print(f"Optimal threshold (on training set): {optimal_thresh:.3f}")
+                print(f"Training accuracy with optimal threshold: {optimal_acc*100:.2f}%")
+
                 # Test the model on the test set using the optimal threshold
                 accuracy_optimal_thresh = test(images_list_test, labels_list_test, label1, label2, weights, optimal_thresh)
                 print(f"Test accuracy with optimal threshold: {accuracy_optimal_thresh*100:.2f}%\n")
