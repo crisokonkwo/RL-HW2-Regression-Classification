@@ -53,7 +53,7 @@ From the project root:
 python .\linear_classification.py
 ```
 
-You should see console output showing the number of samples, labels, and then training/testing progress for each digit pair. At the end of each pair, the script prints a test accuracy.
+You should see console output showing the number of samples, labels, and then training/testing progress for each class pair. At the end of each pair, the script prints a test accuracy.
 
 ## Troubleshooting
 
