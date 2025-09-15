@@ -15,35 +15,36 @@ def plot_image(image_list):
 def train(all_images, all_labels, label1, label2):
     # filter the data for the two labels
     filter = [(img, lbl) for img, lbl in zip(all_images, all_labels) if lbl == label1 or lbl == label2]
-    X = np.asarray([img for img, lbl in filter], dtype=np.float64)
-    Y = np.asarray([1 if lbl == label1 else 0 for img, lbl in filter])
+    X = np.array([img for img, lbl in filter])
+    Y = np.array([1 if lbl == label1 else 0 for img, lbl in filter])
     
     # add a column of ones to the dataset (bias term)
     X = np.hstack((np.ones((X.shape[0], 1)), X))
     
-    # Multidimensional least squares (X^TX)^(-1)X^TY
-    # weights = np.linalg.pinv(X.T @ X) @ X.T @ 
+    # compute the weights using multidimensional least squares (X^TX)^(-1)X^TY
+    weights = np.linalg.pinv(X.T @ X) @ X.T @ Y
+    
+    # pca = PCA(n_components=2)
+    # X_2d = pca.fit_transform(X[:, 1:])  # exclude bias for PCA
+    
+    # plt.figure(figsize=(8, 6))
+    # plt.scatter(X_2d[Y==0, 0], X_2d[Y==0, 1], c='red', label=str(label2), alpha=0.8, edgecolor='k', linewidth=0.5)
+    # plt.scatter(X_2d[Y==1, 0], X_2d[Y==1, 1], c='blue', label=str(label1), alpha=0.8, edgecolor='k', linewidth=0.5)
+    
+    # # Project weights into PCA space
+    # w_pca = pca.transform(weights[1:].reshape(1, -1))  # exclude bias term
+    # w_bias = weights[0]  # bias term
+    
+    # # Transform weights into PCA 2D space
+    # w_2d = np.array([w_pca[0, 0], w_pca[0, 1]])
 
-    m, n = X.shape    
-    r = np.linalg.matrix_rank(X)
-    print("shape:", X.shape, "rank:", r, "min(m,n):", min(m, n))
-
-    print(f"Y must have one label per row of X (got {len(Y)} vs {m})")
-
-    reg = 1e-6  # small regularization parameter
-    if m >= n:
-        # X is tall or square (X^T @ X)^{-1} X^T
-        XtX = X.T @ X
-        # Add regularization to the diagonal to avoid singularity
-        XtX_reg = XtX + reg * np.eye(n)
-        XtX_inv = np.linalg.inv(XtX_reg)
-        weights = XtX_inv @ X.T @ Y
-    else:
-        # X is wide n>m (X^T (X X^T)^{-1})
-        XXt = X @ X.T
-        XXt_reg = XXt + reg * np.eye(m)
-        XXt_inv = np.linalg.inv(XXt_reg)
-        weights = X.T @ XXt_inv @ Y
+    # # Decision boundary: w0 + w1*x + w2*y = 0.5  ->  y = -(w1*x + w0 - 0.5)/w2
+    # xx = np.linspace(np.min(X_2d[:, 0]), np.max(X_2d[:, 0]), 100)
+    # yy = -(w_2d[0]*xx + w_bias - 0.5) / (w_2d[1]+1e-12)  # add small term to avoid division by zero
+    # plt.plot(xx, yy, linestyle='-', color='green', label="Decision boundary")
+    # plt.title(f"Least-Squares Classifier: Training Data + Decision Boundary for {label1} vs {label2}")
+    # plt.legend()
+    # plt.show()
 
     return weights
 
