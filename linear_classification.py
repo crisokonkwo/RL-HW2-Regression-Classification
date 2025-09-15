@@ -1,7 +1,6 @@
 from mnist import MNIST
 import matplotlib.pyplot as plt
 import numpy as np
-# from sklearn.decomposition import PCA
 
 
 def plot_image(image_list):
@@ -19,7 +18,7 @@ def train(all_images, all_labels, label1, label2):
     Y = np.asarray([1 if lbl == label1 else 0 for img, lbl in filter])
     
     # add a column of ones to the dataset (bias term)
-    X = np.hstack((np.ones((X.shape[0], 1)), X))
+    X = np.hstack([np.ones((X.shape[0], 1)), X])
     
     # Multidimensional least squares (X^TX)^(-1)X^TY
     # weights = np.linalg.pinv(X.T @ X) @ X.T @ 
@@ -28,12 +27,13 @@ def train(all_images, all_labels, label1, label2):
     r = np.linalg.matrix_rank(X)
     print("shape:", X.shape, "rank:", r, "min(m,n):", min(m, n))
 
-    print(f"Y must have one label per row of X (got {len(Y)} vs {m})")
+    # print(f"Y must have one label per row of X (got {len(Y)} vs {m})")
 
     reg = 1e-6  # small regularization parameter
     if m >= n:
         # X is tall or square (X^T @ X)^{-1} X^T
         XtX = X.T @ X
+        # print("X^T X shape:", XtX.shape, "rank:", np.linalg.matrix_rank(XtX))
         # Add regularization to the diagonal to avoid singularity
         XtX_reg = XtX + reg * np.eye(n)
         XtX_inv = np.linalg.inv(XtX_reg)
