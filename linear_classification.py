@@ -7,73 +7,36 @@ def plot_image(image_list):
     image = np.asarray(image_list)
 
     plt.figure()
-    plt.imshow(np.reshape(image, (28,28)), cmap='gray_r')
+    plt.imshow(np.reshape(image, (20,20)), cmap='gray_r')
     plt.show()
 
 
 def train(all_images, all_labels, label1, label2):
     # filter the data for the two labels
     pairs = [(img, lbl) for img, lbl in zip(all_images, all_labels) if lbl == label1 or lbl == label2]
-    X = np.asarray([img for img, lbl in pairs], dtype=np.float64)
+    X = np.asarray([img for img, lbl in pairs], dtype=np.float64).reshape(-1, 28, 28)
     Y = np.asarray([1 if lbl == label1 else 0 for img, lbl in pairs], dtype=np.float64)
-    print("Number of samples:", X.shape[0], "Number of features:", X.shape[1])
+    print("Number of samples:", X.shape[0], "Size of images:", X.shape[1:])
+
+    # crop the images 
+    X_crop = X[:, 4:24, 4:24]
+        
+    # flatten the images back to vectors
+    X = X_crop.reshape(X.shape[0], -1)
     
-
-    # drop redundant columns in X (exact duplicates cause singularity)
-    # keep_cols = X.var(axis=0) > 0.0
-    # X = X[:, keep_cols]
-
     # add a column of ones to the dataset (bias term)
     X = np.hstack([np.ones((X.shape[0], 1)), X])
-
-    m, n = X.shape
-    # print(f"Rows (samples) of X must match labels in Y (got {len(Y)} vs {m})")
-    # print("After dropping constant columns and adding bias term, shape of X:", X.shape, "shape of Y:", Y.shape, "number of kept features:", np.sum(keep_cols))
+    
+    print("After dropping rows and columns and adding bias term, shape of X:", X.shape, "shape of Y:", Y.shape)
 
     # Multidimensional least squares (X^TX)^(-1)X^TY
     # weights = np.linalg.pinv(X.T @ X) @ X.T @ Y
 
-    tol = 1e-15  # eigenvalue tolerance; values below are treated as zero
-    if m >= n:
-        print("Using (X^T X)^+ X^T (tall/square case)")
-        XtX = X.T @ X
-        
-        eigenvals, eigenvecs = np.linalg.eig(XtX)
-        eigenvals = np.real(eigenvals)
-        eigenvecs = np.real(eigenvecs)
-        
-        # if eigenvalues are less than tol, treat as zero to avoid undefined inversions this is equivalent to the linear independence of the columns of X
-        lin_ind_col = eigenvals > tol
-        rank = int(np.count_nonzero(lin_ind_col))
-        print(f"Eigenvalues kept (Linearly Independent columns of X): {rank}/{len(eigenvals)} (tol={tol})")
-
-        # Compute the pseudo-inverse using the new eigenvalues
-        inv_diag = np.zeros_like(eigenvals)
-        inv_diag[lin_ind_col] = 1.0 / eigenvals[lin_ind_col]
-        print("Inverted eigenvalues diagonal shape:", np.diag(inv_diag).shape)
-
-        # pseudoinverse XtX^+ using the eigen decomposition
-        XtX_pinv = eigenvecs @ np.diag(inv_diag) @ eigenvecs.T
-        weights = XtX_pinv @ X.T @ Y
-    else:
-        # Wide case: use X^T (X X^T)^+ Y
-        print("Using X^T (X X^T)^+ (wide case)")
-        XXt = X @ X.T
-        
-        eigenvals, eigenvecs = np.linalg.eigh(XXt)
-        eigenvals = np.real(eigenvals)
-        eigenvecs = np.real(eigenvecs)
-
-        lin_ind_col = np.abs(eigenvals) > tol
-        rank = int(np.count_nonzero(lin_ind_col))
-        print(f"Eigenvalues kept (Linearly Independent columns of X): {rank}/{len(eigenvals)} (tol={tol})")
-        
-        inv_diag = np.zeros_like(eigenvals)
-        inv_diag[lin_ind_col] = 1.0 / eigenvals[lin_ind_col]
-        print("Inverted eigenvalues diagonal shape:", np.diag(inv_diag).shape)
-        
-        XXt_pinv = eigenvecs @ np.diag(inv_diag) @ eigenvecs.T
-        weights = X.T @ XXt_pinv @ Y
+    
+    print("Training with (X^T X)^(-1) X^T for tall/square case")
+    XtX = X.T @ X
+    inv_XtX = np.linalg.inv(XtX)
+    weights = inv_XtX @ X.T @ Y
 
     return weights
 
@@ -81,15 +44,17 @@ def train(all_images, all_labels, label1, label2):
 # required for graduate students only
 def get_optimal_thresh(images_train, labels_train, w):
     pairs = [(img, lbl) for img, lbl in zip(images_train, labels_train) if lbl == label1 or lbl == label2]
-    X = np.asarray([img for img, lbl in pairs], dtype=np.float64)
+    X = np.asarray([img for img, lbl in pairs], dtype=np.float64).reshape(-1, 28, 28)
     Y = np.asarray([1 if lbl == label1 else 0 for img, lbl in pairs], dtype=np.float64)
     
+    X_crop = X[:, 4:24, 4:24]
+    X = X_crop.reshape(X.shape[0], -1)
     X = np.hstack((np.ones((X.shape[0], 1)), X))
+    
     predictions = X @ w
     
     best_thresh, best_acc = 0.5, 0
     for t in np.linspace(0, 1, 1001):
-        # print(t)
         pred_labels = (predictions > t).astype(int)
         accuracy = (pred_labels == Y).mean()
         if accuracy > best_acc:
@@ -100,11 +65,11 @@ def get_optimal_thresh(images_train, labels_train, w):
 
 def test(all_images_test, all_labels_test, label1, label2, w, thresh):
     pairs = [(img, lbl) for img, lbl in zip(all_images_test, all_labels_test) if lbl == label1 or lbl == label2]
-    X_test = np.asarray([img for img, lbl in pairs], dtype=np.float64)
+    X_test = np.asarray([img for img, lbl in pairs], dtype=np.float64).reshape(-1, 28, 28)
     G_truth = np.asarray([1 if lbl == label1 else 0 for img, lbl in pairs], dtype=np.float64)
 
-    # X_test = X_test[:, keep_cols]
-    
+    X_crop = X_test[:, 4:24, 4:24]
+    X_test = X_crop.reshape(X_test.shape[0], -1)
     X_test = np.hstack((np.ones((X_test.shape[0], 1)), X_test))
 
     predictions = X_test @ w
@@ -127,7 +92,7 @@ if __name__ == "__main__":
     unique_labels = set(labels_list)
     print("Labels:", unique_labels)
     
-    # plot_image(images_list[0])
+    # plot_image(images_list[1])
     
     pair_counter = 0
     for label1 in unique_labels:
