@@ -149,7 +149,7 @@ if __name__ == "__main__":
     crop = (5,23,5,23) # (row_start, row_end, col_start, col_end)
     
     # plot_image(images_list[1200])
-    compare_digits(images_list, labels_list, 4, 9, crop)
+    # compare_digits(images_list, labels_list, 4, 9, crop)
     
     pair_counter = 0
     for label1 in unique_labels:

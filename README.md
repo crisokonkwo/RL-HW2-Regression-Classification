@@ -4,7 +4,7 @@ Training a linear classifier on the MNIST dataset, by fitting a line using least
 
 ## How to run
 
-These steps assume Windows with PowerShell and Python set up. The dataset files are expected under `./datasets/MNIST/raw` as in this repo.
+These steps assume Windows with PowerShell and Python set up. The dataset files are expected under `./datasets/MNIST/raw`.
 
 1. Create/activate a Python environment (optional but recommended)
 
@@ -33,7 +33,7 @@ pip install -r requirements.txt
 
 2. Verify the dataset path
 
-`linear_classification.py` expects the MNIST files at `./datasets/MNIST/raw`:
+`linear_classification.py` expects the MNIST files in `./datasets/MNIST/raw`:
 
 ```text
 datasets/
@@ -49,12 +49,6 @@ If your files are elsewhere, edit the path in `linear_classification.py`:
 
 ```python
 mndata = MNIST('./datasets/MNIST/raw')
-```
-
-If you have a ZIP of MNIST files in `datasets/`, you can unzip it with PowerShell:
-
-```powershell
-Expand-Archive -Path .\datasets\MNIST-*.zip -DestinationPath .\datasets -Force
 ```
 
 3. Run the script
