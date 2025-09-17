@@ -21,17 +21,14 @@ def train(all_images, all_labels, label1, label2, crop):
     # crop the images and flatten the images back to vectors
     r0,r1,c0,c1 = crop
     X_crop = X_train[:, r0:r1, c0:c1].reshape(X_train.shape[0], -1)
-    print("Cropped image shape:", X_crop.shape)
+    print("Cropped image shape:", X_crop.shape[1:])
     
     # Find all-zero rows and columns
     col_sums = X_crop.sum(axis=0)
     zero_cols = (col_sums == 0)
-    row_sums = X_crop.sum(axis=1)
-    zero_rows = (row_sums == 0)
 
     # Add tiny noise to those rows/columns to avoid singularity
-    X_crop[:, zero_cols] = np.random.normal(0, 1e-6, size=(X_crop.shape[0], zero_cols.sum()))
-    X_crop[zero_rows, :] = np.random.normal(0, 1e-6, size=(zero_rows.sum(), X_crop.shape[1]))
+    X_crop[:, zero_cols] = np.random.normal(0, 1e-15, size=(X_crop.shape[0], zero_cols.sum()))
 
     print(np.linalg.matrix_rank(X_crop), "out of", X_crop.shape[1], "features are linearly independent")
 
@@ -66,18 +63,15 @@ def get_optimal_thresh(images_train, labels_train, w, label1, label2, crop):
     
     col_sums = X_crop.sum(axis=0)
     zero_cols = (col_sums == 0)
-    row_sums = X_crop.sum(axis=1)
-    zero_rows = (row_sums == 0)
 
-    X_crop[:, zero_cols] = np.random.normal(0, 1e-6, size=(X_crop.shape[0], zero_cols.sum()))
-    X_crop[zero_rows, :] = np.random.normal(0, 1e-6, size=(zero_rows.sum(), X_crop.shape[1]))
+    X_crop[:, zero_cols] = np.random.normal(0, 1e-15, size=(X_crop.shape[0], zero_cols.sum()))
 
     X = np.hstack((np.ones((X_crop.shape[0], 1)), X_crop))
     
     predictions = X @ w
     
     # Spread threshold options between min and max of the predictions 
-    thresh_options = np.linspace(predictions.min(), predictions.max(), 201)
+    thresh_options = np.linspace(predictions.min(), predictions.max(), 1000)
     
     best_thresh, best_acc = 0.5, 0.0
     for t in thresh_options:
@@ -99,11 +93,8 @@ def test(all_images_test, all_labels_test, label1, label2, w, thresh, crop):
     
     col_sums = X_crop.sum(axis=0)
     zero_cols = (col_sums == 0)
-    row_sums = X_crop.sum(axis=1)
-    zero_rows = (row_sums == 0)
 
-    X_crop[:, zero_cols] = np.random.normal(0, 1e-6, size=(X_crop.shape[0], zero_cols.sum()))
-    X_crop[zero_rows, :] = np.random.normal(0, 1e-6, size=(zero_rows.sum(), X_crop.shape[1]))
+    X_crop[:, zero_cols] = np.random.normal(0, 1e-15, size=(X_crop.shape[0], zero_cols.sum()))
 
     X = np.hstack((np.ones((X_crop.shape[0], 1)), X_crop))
 
@@ -122,18 +113,18 @@ def show_avg_digit(images, labels, digit, crop):
     avg_img = avg_img[r0:r1, c0:c1]
     return avg_img
 
-def compare_digits(images, labels, d1=7, d2=9, crop=(4,24,4,24)):
-    avg1 = show_avg_digit(images, labels, d1, crop)
-    avg2 = show_avg_digit(images, labels, d2, crop)
+def compare_digits(images, labels, label1=7, label2=9, crop=(4,24,4,24)):
+    avg1 = show_avg_digit(images, labels, label1, crop)
+    avg2 = show_avg_digit(images, labels, label2, crop)
     diff = avg1 - avg2
 
     fig, axes = plt.subplots(1, 3, figsize=(10,4))
     axes[0].imshow(avg1, cmap="gray_r")
-    axes[0].set_title(f"Average {d1}")
+    axes[0].set_title(f"Average {label1}")
     axes[1].imshow(avg2, cmap="gray_r")
-    axes[1].set_title(f"Average {d2}")
+    axes[1].set_title(f"Average {label2}")
     im = axes[2].imshow(diff, cmap="bwr")
-    axes[2].set_title(f"Difference ({d1}-{d2})")
+    axes[2].set_title(f"Difference ({label1}-{label2})")
     fig.colorbar(im, ax=axes[2])
     plt.show()
 
@@ -152,7 +143,7 @@ if __name__ == "__main__":
     unique_labels = set(labels_list)
     print("Labels:", unique_labels)
     
-    crop = (4,24,4,24)
+    crop = (5,22,5,22) # (row_start, row_end, col_start, col_end)
     
     # plot_image(images_list[1200])
     compare_digits(images_list, labels_list, 7, 9, crop)
