@@ -20,8 +20,9 @@ def train(all_images, all_labels, label1, label2, crop):
 
     # crop the images and flatten the images back to vectors
     r0,r1,c0,c1 = crop
-    X_crop = X_train[:, r0:r1, c0:c1].reshape(X_train.shape[0], -1)
+    X_crop = X_train[:, r0:r1, c0:c1]
     print("Cropped image shape:", X_crop.shape[1:])
+    X_crop = X_crop.reshape(X_train.shape[0], -1)
     
     # Find all-zero rows and columns
     col_sums = X_crop.sum(axis=0)
@@ -59,7 +60,8 @@ def get_optimal_thresh(images_train, labels_train, w, label1, label2, crop):
     Y_thresh = np.asarray([1 if lbl == label1 else 0 for img, lbl in pairs], dtype=np.float64)
 
     r0,r1,c0,c1 = crop
-    X_crop = X_thresh[:, r0:r1, c0:c1].reshape(X_thresh.shape[0], -1)
+    X_crop = X_thresh[:, r0:r1, c0:c1]
+    X_crop = X_crop.reshape(X_thresh.shape[0], -1)
     
     col_sums = X_crop.sum(axis=0)
     zero_cols = (col_sums == 0)
@@ -89,7 +91,8 @@ def test(all_images_test, all_labels_test, label1, label2, w, thresh, crop):
     G_truth = np.asarray([1 if lbl == label1 else 0 for img, lbl in pairs], dtype=np.float64)
 
     r0,r1,c0,c1 = crop
-    X_crop = X_test[:, r0:r1, c0:c1].reshape(X_test.shape[0], -1)
+    X_crop = X_test[:, r0:r1, c0:c1]
+    X_crop = X_crop.reshape(X_test.shape[0], -1)
     
     col_sums = X_crop.sum(axis=0)
     zero_cols = (col_sums == 0)
@@ -129,7 +132,6 @@ def compare_digits(images, labels, label1=7, label2=9, crop=(4,24,4,24)):
     plt.show()
 
 
-
 if __name__ == "__main__":
 
     # load the data
@@ -143,10 +145,10 @@ if __name__ == "__main__":
     unique_labels = set(labels_list)
     print("Labels:", unique_labels)
     
-    crop = (5,22,5,22) # (row_start, row_end, col_start, col_end)
+    crop = (5,23,5,23) # (row_start, row_end, col_start, col_end)
     
     # plot_image(images_list[1200])
-    compare_digits(images_list, labels_list, 7, 9, crop)
+    compare_digits(images_list, labels_list, 4, 9, crop)
     
     pair_counter = 0
     for label1 in unique_labels:
