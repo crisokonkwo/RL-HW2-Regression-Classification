@@ -108,7 +108,7 @@ def test(all_images_test, all_labels_test, label1, label2, w, thresh, crop):
     return accuracy
 
 
-def show_avg_digit(images, labels, digit, crop):
+def plot_avg_digit(images, labels, digit, crop):
     imgs = np.asarray([img for img, lbl in zip(images, labels) if lbl == digit], dtype=np.float64)
     avg_img = imgs.mean(axis=0).reshape(28, 28)
     
@@ -116,9 +116,10 @@ def show_avg_digit(images, labels, digit, crop):
     avg_img = avg_img[r0:r1, c0:c1]
     return avg_img
 
+
 def compare_digits(images, labels, label1=7, label2=9, crop=(4,24,4,24)):
-    avg1 = show_avg_digit(images, labels, label1, crop)
-    avg2 = show_avg_digit(images, labels, label2, crop)
+    avg1 = plot_avg_digit(images, labels, label1, crop)
+    avg2 = plot_avg_digit(images, labels, label2, crop)
     diff = avg1 - avg2
 
     fig, axes = plt.subplots(1, 3, figsize=(10,4))
