@@ -8,58 +8,58 @@ These steps assume Windows with PowerShell and Python set up. The dataset files 
 
 1. Create/activate a Python environment (optional but recommended)
 
-Pick one of the two options below.
+   Pick one of the two options below.
 
-- Using Conda (recommended if you already use Anaconda/Miniconda):
+    - Using Conda (recommended if you already use Anaconda/Miniconda):
 
-```powershell
-conda create -n mnist-linreg python=3.13 -y
-conda activate mnist-linreg
-pip install -r requirements.txt
-```
+   ```powershell
+   conda create -n mnist-linreg python=3.13 -y
+   conda activate mnist-linreg
+   pip install -r requirements.txt
+   ```
 
-- Using venv (built-in Python virtual environment):
+    - Using venv (built-in Python virtual environment):
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-```
+   ```powershell
+   python -m venv .venv
+   .\.venv\Scripts\Activate.ps1
+   pip install -r requirements.txt
+   ```
 
-### Prerequisites
+   ### Prerequisites
 
-- Python 3.13 (tested with 3.13.7)
-- Packages listed in `requirements.txt`
+    - Python 3.13 (tested with 3.13.7)
+    - Packages listed in `requirements.txt`
 
 2. Verify the dataset path
 
-`linear_classification.py` expects the MNIST files in `./datasets/MNIST/raw`:
+   `linear_classification.py` expects the MNIST files in `./datasets/MNIST/raw`:
 
-```text
-datasets/
- MNIST/
-    raw/
-      train-images-idx3-ubyte
-      train-labels-idx1-ubyte
-      t10k-images-idx3-ubyte
-      t10k-labels-idx1-ubyte
-```
+   ```text
+   datasets/
+    MNIST/
+      raw/
+        train-images-idx3-ubyte
+        train-labels-idx1-ubyte
+        t10k-images-idx3-ubyte
+        t10k-labels-idx1-ubyte
+   ```
 
-If your files are elsewhere, edit the path in `linear_classification.py`:
+   If your files are elsewhere, edit the path in `linear_classification.py`:
 
-```python
-mndata = MNIST('./datasets/MNIST/raw')
-```
+   ```python
+   mndata = MNIST('./datasets/MNIST/raw')
+   ```
 
 3. Run the script
 
-From the project root:
+   From the project root:
 
-```powershell
-python linear_classification.py
-```
+   ```powershell
+   python linear_classification.py
+   ```
 
-You should see console output showing the number of samples, labels, and then training/testing progress for each class pair. At the end of each pair, the script prints a test accuracy.
+   You should see console output showing the number of samples, labels, and then training/testing progress for each class pair. At the end of each pair, the script prints a test accuracy.
 
 ### Plotting (optional)
 
